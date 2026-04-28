@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#080808;color:#fff;font-family:Georgia,serif;min-height:100vh}
-input,textarea{width:100%;background:#181818;border:1px solid #333;border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:12px;font-family:Georgia,serif}
+input{width:100%;background:#181818;border:1px solid #333;border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:12px}
 button{width:100%;background:linear-gradient(135deg,#ff4545,#c0392b);color:#fff;border:none;border-radius:10px;padding:14px;font-weight:700;font-size:15px;cursor:pointer}
 button:disabled{background:#333;cursor:not-allowed}
 .card{background:#0f0f0f;border:1px solid #2a2a2a;border-radius:16px;padding:20px;margin-bottom:16px}
@@ -29,7 +29,6 @@ button:disabled{background:#333;cursor:not-allowed}
 </div>
 
 <div style="max-width:700px;margin:0 auto;padding:24px 16px">
-
   <div class="card">
     <div class="label">PASTE YOUTUBE LINK</div>
     <input id="urlInput" placeholder="https://youtube.com/watch?v=..."/>
@@ -75,17 +74,19 @@ button:disabled{background:#333;cursor:not-allowed}
   </div>
 
   <div style="text-align:center;color:#333;font-size:12px;font-family:monospace;padding:24px 0">
-    Free · Powered by Claude AI
+    Free · Powered by Google Gemini AI
   </div>
 </div>
 
 <script>
+const WORKER_URL = 'https://ytvision-ai.anirbank796.workers.dev/';
+
 function extractId(url){
   const p=[/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,/youtube\.com\/shorts\/([^&\n?#]+)/];
   for(const r of p){const m=url.match(r);if(m)return m[1];}
   return null;
 }
-function show(id,val){document.getElementById(id).style.display=val||'block';}
+function show(id){document.getElementById(id).style.display='block';}
 function hide(id){document.getElementById(id).style.display='none';}
 function setText(id,txt){document.getElementById(id).textContent=txt;}
 function setHTML(id,html){document.getElementById(id).innerHTML=html;}
@@ -100,7 +101,7 @@ async function analyze(){
   hide('metaBox');
 
   const id=extractId(url);
-  if(!id){setError('❌ Invalid YouTube URL. Please paste a valid YouTube link.');return;}
+  if(!id){setError('❌ Invalid YouTube URL. Please paste a valid link.');return;}
 
   btn.disabled=true;
 
@@ -127,44 +128,32 @@ async function analyze(){
       if(tr?.captions?.length)transcript=tr.captions.map(c=>c.text).join(' ');
     }catch(e){}
 
-    setStatus('🤖 AI is analyzing your video...');
+    setStatus('🤖 Gemini AI is analyzing...');
 
-    const prompt=`Analyze this YouTube video. Reply with ONLY a raw JSON object. No markdown. No explanation. No backticks. Just the JSON.
+    const prompt=`Analyze this YouTube video. Reply with ONLY a raw JSON object. No markdown. No backticks. Just JSON.
 
 Title: ${meta.title}
 Channel: ${meta.author_name}
-${transcript?'Transcript:\n'+transcript.slice(0,1500):'[No transcript available - use title to analyze]'}
+${transcript?'Transcript:\n'+transcript.slice(0,1500):'[No transcript - analyze from title]'}
 
-Return exactly this JSON:
-{"topic":"one sentence topic","category":"Tech or Education or Entertainment or Gaming or Music or News or Sports","summary":"3 sentences about the video","keyPoints":["point 1","point 2","point 3","point 4"],"detectedPerson":{"found":true,"name":"person name or null","role":"their job or null","confidence":"high"},"sentiment":"Positive","targetAudience":"who watches this","tags":["tag1","tag2","tag3","tag4","tag5"],"thumbnailSuggestions":[{"style":"Bold Text","description":"bright bold thumbnail","textOverlay":"GONE WRONG!!","colorScheme":"red and black","emoji":"🔥","bgGradient":"linear-gradient(135deg,#1a1a2e,#16213e)"},{"style":"Face + Text","description":"person reacting","textOverlay":"I Can't Believe This","colorScheme":"yellow and dark","emoji":"😱","bgGradient":"linear-gradient(135deg,#c0392b,#8e44ad)"},{"style":"Curiosity Gap","description":"mystery style","textOverlay":"What Happened Next...","colorScheme":"orange and red","emoji":"❓","bgGradient":"linear-gradient(135deg,#f39c12,#e74c3c)"},{"style":"Minimal Clean","description":"clean professional","textOverlay":"The Truth About This","colorScheme":"white and green","emoji":"✨","bgGradient":"linear-gradient(135deg,#2ecc71,#1abc9c)"}]}`;
+Return this exact JSON:
+{"topic":"one sentence topic","category":"Tech or Education or Entertainment or Gaming or Music or News or Sports","summary":"3 sentences about the video","keyPoints":["point 1","point 2","point 3","point 4"],"detectedPerson":{"found":true,"name":"person name or null","role":"their job or null","confidence":"high or medium or low"},"sentiment":"Positive or Negative or Neutral or Informative","targetAudience":"who watches this","tags":["tag1","tag2","tag3","tag4","tag5"],"thumbnailSuggestions":[{"style":"Bold Text","description":"bright bold thumbnail","textOverlay":"SHORT CATCHY TEXT","colorScheme":"red and black","emoji":"🔥","bgGradient":"linear-gradient(135deg,#1a1a2e,#16213e)"},{"style":"Face + Text","description":"person reacting","textOverlay":"I Can't Believe This","colorScheme":"yellow and dark","emoji":"😱","bgGradient":"linear-gradient(135deg,#c0392b,#8e44ad)"},{"style":"Curiosity Gap","description":"mystery style","textOverlay":"What Happened Next...","colorScheme":"orange and red","emoji":"❓","bgGradient":"linear-gradient(135deg,#f39c12,#e74c3c)"},{"style":"Minimal Clean","description":"clean professional","textOverlay":"The Real Story","colorScheme":"white and green","emoji":"✨","bgGradient":"linear-gradient(135deg,#2ecc71,#1abc9c)"}]}`;
 
-    // Use allorigins proxy which works better with POST
-    const proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent('https://api.anthropic.com/v1/messages');
-
-    const aiRes=await fetch(proxyUrl,{
+    const aiRes=await fetch(WORKER_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:1000,
-        messages:[{role:'user',content:prompt}]
-      })
+      body:JSON.stringify({prompt})
     });
 
-    const rawText=await aiRes.text();
-    let ai;
-    try{ai=JSON.parse(rawText);}
-    catch(e){throw new Error('Proxy error. Raw: '+rawText.slice(0,120));}
-
-    const aiText=ai.content?.map(b=>b.text||'').join('')||'';
-    if(!aiText)throw new Error('No response from AI. Status: '+(ai.error?.message||JSON.stringify(ai).slice(0,100)));
+    const aiData=await aiRes.json();
+    const aiText=aiData?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    if(!aiText)throw new Error('No response from AI. Please try again.');
 
     const s=aiText.indexOf('{');
-    const e2=aiText.lastIndexOf('}');
-    if(s===-1||e2===-1)throw new Error('No JSON in response: '+aiText.slice(0,100));
-    const data=JSON.parse(aiText.slice(s,e2+1));
+    const e=aiText.lastIndexOf('}');
+    if(s===-1)throw new Error('Bad AI response. Try again.');
+    const data=JSON.parse(aiText.slice(s,e+1));
 
-    // Show badges
     setHTML('metaBadges',
       `<span style="background:rgba(255,69,69,0.15);color:#ff7070;padding:2px 10px;border-radius:100px;font-size:12px">${data.category}</span>
        <span style="background:rgba(255,255,255,0.05);color:#aaa;padding:2px 10px;border-radius:100px;font-size:12px;margin-left:6px">${data.sentiment}</span>
