@@ -139,7 +139,7 @@ ${transcript ? 'Transcript:\n' + transcript.slice(0,2000) : '[No transcript]'}
 JSON structure:
 {"topic":"1 sentence topic","category":"category","summary":"3-4 sentence summary","keyPoints":["p1","p2","p3","p4"],"detectedPerson":{"found":true,"name":"name or null","role":"role or null","confidence":"high/medium/low"},"sentiment":"Positive/Negative/Neutral/Informative","targetAudience":"audience","tags":["t1","t2","t3","t4","t5"],"thumbnailSuggestions":[{"style":"Bold Text","description":"desc","textOverlay":"text","colorScheme":"colors","emoji":"🔥","bgGradient":"linear-gradient(135deg,#1a1a2e,#16213e)"},{"style":"Face + Text","description":"desc","textOverlay":"text","colorScheme":"colors","emoji":"💡","bgGradient":"linear-gradient(135deg,#c0392b,#8e44ad)"},{"style":"Curiosity Gap","description":"desc","textOverlay":"text","colorScheme":"colors","emoji":"❓","bgGradient":"linear-gradient(135deg,#f39c12,#e74c3c)"},{"style":"Minimal Clean","description":"desc","textOverlay":"text","colorScheme":"colors","emoji":"✨","bgGradient":"linear-gradient(135deg,#2ecc71,#1abc9c)"}]}`;
 
-    const ai = await fetch('https://api.anthropic.com/v1/messages', {
+    const ai = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:1000, messages:[{role:'user',content:prompt}]})
     }).then(r => r.json());
