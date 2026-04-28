@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#080808;color:#fff;font-family:Georgia,serif;min-height:100vh}
-input{width:100%;background:#181818;border:1px solid #333;border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:12px}
+input,textarea{width:100%;background:#181818;border:1px solid #333;border-radius:10px;padding:12px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:12px;font-family:Georgia,serif}
 button{width:100%;background:linear-gradient(135deg,#ff4545,#c0392b);color:#fff;border:none;border-radius:10px;padding:14px;font-weight:700;font-size:15px;cursor:pointer}
 button:disabled{background:#333;cursor:not-allowed}
 .card{background:#0f0f0f;border:1px solid #2a2a2a;border-radius:16px;padding:20px;margin-bottom:16px}
@@ -17,6 +17,7 @@ button:disabled{background:#333;cursor:not-allowed}
 .thumb-img{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;position:relative}
 .error{background:rgba(255,0,0,0.05);border:1px solid rgba(255,0,0,0.2);border-radius:8px;color:#ff6060;padding:12px;margin-top:12px;font-size:13px}
 .green{background:rgba(78,204,163,0.05);border:1px solid rgba(78,204,163,0.3);border-radius:16px;padding:20px;margin-bottom:16px}
+.status{background:rgba(255,69,69,0.05);border:1px solid rgba(255,69,69,0.15);border-radius:8px;color:#ff7070;padding:12px;margin-top:12px;font-size:13px;font-family:monospace}
 </style>
 </head>
 <body>
@@ -28,18 +29,19 @@ button:disabled{background:#333;cursor:not-allowed}
 </div>
 
 <div style="max-width:700px;margin:0 auto;padding:24px 16px">
+
   <div class="card">
     <div class="label">PASTE YOUTUBE LINK</div>
-    <input id="urlInput" placeholder="https://youtube.com/watch?v=..." />
+    <input id="urlInput" placeholder="https://youtube.com/watch?v=..."/>
     <button id="analyzeBtn" onclick="analyze()">⚡ ANALYZE VIDEO</button>
-    <div id="statusBox" style="display:none;margin-top:12px;padding:12px;background:rgba(255,69,69,0.05);border:1px solid rgba(255,69,69,0.15);border-radius:8px;color:#ff7070;font-size:13px;font-family:monospace"></div>
+    <div id="statusBox" style="display:none" class="status"></div>
     <div id="errorBox" class="error" style="display:none"></div>
   </div>
 
   <div id="metaBox" style="display:none" class="card">
-    <div style="display:flex;gap:14px;align-items:flex-start">
-      <img id="metaThumb" style="width:110px;border-radius:8px;flex-shrink:0" />
-      <div>
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      <img id="metaThumb" style="width:110px;border-radius:8px;flex-shrink:0"/>
+      <div style="flex:1;min-width:180px">
         <div class="label">VIDEO FOUND ✓</div>
         <div id="metaTitle" style="font-weight:700;font-size:16px;line-height:1.3;margin-bottom:4px"></div>
         <div id="metaAuthor" style="color:#888;font-size:13px"></div>
@@ -54,22 +56,18 @@ button:disabled{background:#333;cursor:not-allowed}
       <div id="rTopic" style="font-size:17px;font-weight:700;margin-bottom:10px"></div>
       <div id="rSummary" style="color:#bbb;font-size:14px;line-height:1.7"></div>
     </div>
-
     <div id="personBox" class="green">
       <div style="color:#4ecca3;font-size:11px;font-family:monospace;margin-bottom:10px">👤 PERSON DETECTION</div>
       <div id="rPerson"></div>
     </div>
-
     <div class="card">
       <div class="label">📌 KEY POINTS</div>
       <div id="rPoints"></div>
     </div>
-
     <div class="card">
       <div class="label">🏷 TAGS</div>
       <div id="rTags"></div>
     </div>
-
     <div>
       <div style="text-align:center;color:#ff4545;font-size:13px;font-family:monospace;letter-spacing:2px;margin-bottom:16px">🖼 AI THUMBNAIL CONCEPTS</div>
       <div id="rThumbs"></div>
@@ -77,113 +75,118 @@ button:disabled{background:#333;cursor:not-allowed}
   </div>
 
   <div style="text-align:center;color:#333;font-size:12px;font-family:monospace;padding:24px 0">
-    Free · No API key needed · Powered by Claude AI
+    Free · Powered by Claude AI
   </div>
 </div>
 
 <script>
-function extractId(url) {
-  const p = [/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/, /youtube\.com\/shorts\/([^&\n?#]+)/];
-  for (const r of p) { const m = url.match(r); if (m) return m[1]; }
+function extractId(url){
+  const p=[/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,/youtube\.com\/shorts\/([^&\n?#]+)/];
+  for(const r of p){const m=url.match(r);if(m)return m[1];}
   return null;
 }
+function show(id,val){document.getElementById(id).style.display=val||'block';}
+function hide(id){document.getElementById(id).style.display='none';}
+function setText(id,txt){document.getElementById(id).textContent=txt;}
+function setHTML(id,html){document.getElementById(id).innerHTML=html;}
+function setStatus(msg){if(msg){show('statusBox');setText('statusBox',msg);}else{hide('statusBox');}}
+function setError(msg){if(msg){show('errorBox');setText('errorBox',msg);}else{hide('errorBox');}}
 
-function setStatus(msg) {
-  const b = document.getElementById('statusBox');
-  b.style.display = msg ? 'block' : 'none';
-  b.textContent = msg;
-}
-
-function setError(msg) {
-  const b = document.getElementById('errorBox');
-  b.style.display = msg ? 'block' : 'none';
-  b.textContent = msg;
-}
-
-async function analyze() {
-  const url = document.getElementById('urlInput').value.trim();
-  const btn = document.getElementById('analyzeBtn');
+async function analyze(){
+  const url=document.getElementById('urlInput').value.trim();
+  const btn=document.getElementById('analyzeBtn');
   setError('');
-  document.getElementById('results').style.display = 'none';
-  document.getElementById('metaBox').style.display = 'none';
+  hide('results');
+  hide('metaBox');
 
-  const id = extractId(url);
-  if (!id) { setError('❌ Invalid YouTube URL. Please paste a valid YouTube link.'); return; }
+  const id=extractId(url);
+  if(!id){setError('❌ Invalid YouTube URL. Please paste a valid YouTube link.');return;}
 
-  btn.disabled = true;
+  btn.disabled=true;
 
-  try {
+  try{
     setStatus('🔍 Fetching video info...');
-    const meta = await fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + id + '&format=json').then(r => r.json());
-
-    document.getElementById('metaThumb').src = 'https://img.youtube.com/vi/' + id + '/hqdefault.jpg';
-    document.getElementById('metaTitle').textContent = meta.title;
-    document.getElementById('metaAuthor').textContent = '📺 ' + meta.author_name;
-    document.getElementById('metaBox').style.display = 'block';
-
-    setStatus('📝 Fetching transcript...');
-    let transcript = null;
-    try {
-      const tr = await fetch('https://tactiq-apps-prod.tactiq.io/transcript', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({videoUrl:'https://www.youtube.com/watch?v='+id, language:'en'})
-      }).then(r => r.json());
-      if (tr?.captions?.length) transcript = tr.captions.map(c => c.text).join(' ');
-    } catch(e) {}
-
-    setStatus('🤖 AI is analyzing...');
-    const prompt = `Analyze this YouTube video and respond ONLY with valid JSON no markdown no backticks.
-Title: ${meta.title}
-Channel: ${meta.author_name}
-${transcript ? 'Transcript:\n' + transcript.slice(0,2000) : '[No transcript]'}
-JSON structure:
-{"topic":"1 sentence topic","category":"category","summary":"3-4 sentence summary","keyPoints":["p1","p2","p3","p4"],"detectedPerson":{"found":true,"name":"name or null","role":"role or null","confidence":"high/medium/low"},"sentiment":"Positive/Negative/Neutral/Informative","targetAudience":"audience","tags":["t1","t2","t3","t4","t5"],"thumbnailSuggestions":[{"style":"Bold Text","description":"desc","textOverlay":"text","colorScheme":"colors","emoji":"🔥","bgGradient":"linear-gradient(135deg,#1a1a2e,#16213e)"},{"style":"Face + Text","description":"desc","textOverlay":"text","colorScheme":"colors","emoji":"💡","bgGradient":"linear-gradient(135deg,#c0392b,#8e44ad)"},{"style":"Curiosity Gap","description":"desc","textOverlay":"text","colorScheme":"colors","emoji":"❓","bgGradient":"linear-gradient(135deg,#f39c12,#e74c3c)"},{"style":"Minimal Clean","description":"desc","textOverlay":"text","colorScheme":"colors","emoji":"✨","bgGradient":"linear-gradient(135deg,#2ecc71,#1abc9c)"}]}`;
-
-    const aiRes = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:1000, messages:[{role:'user',content:prompt}]})
+    const meta=await fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v='+id+'&format=json').then(r=>{
+      if(!r.ok)throw new Error('Video not found');
+      return r.json();
     });
 
-    const rawText = await aiRes.text();
+    document.getElementById('metaThumb').src='https://img.youtube.com/vi/'+id+'/hqdefault.jpg';
+    setText('metaTitle',meta.title);
+    setText('metaAuthor','📺 '+meta.author_name);
+    show('metaBox');
+
+    setStatus('📝 Fetching transcript...');
+    let transcript=null;
+    try{
+      const tr=await fetch('https://tactiq-apps-prod.tactiq.io/transcript',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({videoUrl:'https://www.youtube.com/watch?v='+id,language:'en'})
+      }).then(r=>r.json());
+      if(tr?.captions?.length)transcript=tr.captions.map(c=>c.text).join(' ');
+    }catch(e){}
+
+    setStatus('🤖 AI is analyzing your video...');
+
+    const prompt=`Analyze this YouTube video. Reply with ONLY a raw JSON object. No markdown. No explanation. No backticks. Just the JSON.
+
+Title: ${meta.title}
+Channel: ${meta.author_name}
+${transcript?'Transcript:\n'+transcript.slice(0,1500):'[No transcript available - use title to analyze]'}
+
+Return exactly this JSON:
+{"topic":"one sentence topic","category":"Tech or Education or Entertainment or Gaming or Music or News or Sports","summary":"3 sentences about the video","keyPoints":["point 1","point 2","point 3","point 4"],"detectedPerson":{"found":true,"name":"person name or null","role":"their job or null","confidence":"high"},"sentiment":"Positive","targetAudience":"who watches this","tags":["tag1","tag2","tag3","tag4","tag5"],"thumbnailSuggestions":[{"style":"Bold Text","description":"bright bold thumbnail","textOverlay":"GONE WRONG!!","colorScheme":"red and black","emoji":"🔥","bgGradient":"linear-gradient(135deg,#1a1a2e,#16213e)"},{"style":"Face + Text","description":"person reacting","textOverlay":"I Can't Believe This","colorScheme":"yellow and dark","emoji":"😱","bgGradient":"linear-gradient(135deg,#c0392b,#8e44ad)"},{"style":"Curiosity Gap","description":"mystery style","textOverlay":"What Happened Next...","colorScheme":"orange and red","emoji":"❓","bgGradient":"linear-gradient(135deg,#f39c12,#e74c3c)"},{"style":"Minimal Clean","description":"clean professional","textOverlay":"The Truth About This","colorScheme":"white and green","emoji":"✨","bgGradient":"linear-gradient(135deg,#2ecc71,#1abc9c)"}]}`;
+
+    // Use allorigins proxy which works better with POST
+    const proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent('https://api.anthropic.com/v1/messages');
+
+    const aiRes=await fetch(proxyUrl,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+
+    const rawText=await aiRes.text();
     let ai;
-    try { ai = JSON.parse(rawText); } catch(e) { throw new Error('AI response error: ' + rawText.slice(0,100)); }
+    try{ai=JSON.parse(rawText);}
+    catch(e){throw new Error('Proxy error. Raw: '+rawText.slice(0,120));}
 
-    const text = ai.content?.map(b => b.text||'').join('') || '';
-    if (!text) throw new Error('Empty AI response. Try again.');
-    const cleaned = text.replace(/```json|```/g,'').trim();
-    const jsonStart = cleaned.indexOf('{');
-    const jsonEnd = cleaned.lastIndexOf('}');
-    if (jsonStart === -1) throw new Error('No JSON found in response');
-    const data = JSON.parse(cleaned.slice(jsonStart, jsonEnd+1));
+    const aiText=ai.content?.map(b=>b.text||'').join('')||'';
+    if(!aiText)throw new Error('No response from AI. Status: '+(ai.error?.message||JSON.stringify(ai).slice(0,100)));
 
-    // Badges
-    document.getElementById('metaBadges').innerHTML =
+    const s=aiText.indexOf('{');
+    const e2=aiText.lastIndexOf('}');
+    if(s===-1||e2===-1)throw new Error('No JSON in response: '+aiText.slice(0,100));
+    const data=JSON.parse(aiText.slice(s,e2+1));
+
+    // Show badges
+    setHTML('metaBadges',
       `<span style="background:rgba(255,69,69,0.15);color:#ff7070;padding:2px 10px;border-radius:100px;font-size:12px">${data.category}</span>
        <span style="background:rgba(255,255,255,0.05);color:#aaa;padding:2px 10px;border-radius:100px;font-size:12px;margin-left:6px">${data.sentiment}</span>
-       <span style="background:${transcript?'rgba(0,200,100,0.1)':'rgba(255,200,0,0.1)'};color:${transcript?'#4ecca3':'#ffd700'};padding:2px 10px;border-radius:100px;font-size:12px;margin-left:6px">${transcript?'✓ Transcript':'⚠ No transcript'}</span>`;
+       <span style="background:${transcript?'rgba(0,200,100,0.1)':'rgba(255,200,0,0.1)'};color:${transcript?'#4ecca3':'#ffd700'};padding:2px 10px;border-radius:100px;font-size:12px;margin-left:6px">${transcript?'✓ Transcript':'⚠ No transcript'}</span>`
+    );
 
-    document.getElementById('rTopic').textContent = data.topic;
-    document.getElementById('rSummary').textContent = data.summary;
+    setText('rTopic',data.topic);
+    setText('rSummary',data.summary);
 
-    // Person
-    const p = data.detectedPerson;
-    document.getElementById('rPerson').innerHTML = p?.found
-      ? `<div style="font-size:16px;font-weight:700">🙂 ${p.name||'Person detected'}</div>${p.role?`<div style="color:#888;font-size:13px;margin-top:4px">${p.role}</div>`:''}<div style="margin-top:8px;color:#4ecca3;font-size:12px">Confidence: ${p.confidence}</div>`
-      : `<div style="color:#666;font-size:14px">🎭 No specific person detected</div>`;
+    const p=data.detectedPerson;
+    setHTML('rPerson',p?.found
+      ?`<div style="font-size:16px;font-weight:700">🙂 ${p.name||'Person detected'}</div>${p.role?`<div style="color:#888;font-size:13px;margin-top:4px">${p.role}</div>`:''}<div style="margin-top:8px;color:#4ecca3;font-size:12px">Confidence: ${p.confidence}</div>`
+      :`<div style="color:#666;font-size:14px">🎭 No specific person detected</div>`
+    );
 
-    // Key points
-    document.getElementById('rPoints').innerHTML = data.keyPoints.map((pt,i) =>
-      `<div style="display:flex;gap:10px;margin-bottom:10px;color:#ccc;font-size:14px;line-height:1.5"><span style="color:#ff4545;font-weight:700">${i+1}.</span>${pt}</div>`
-    ).join('');
+    setHTML('rPoints',data.keyPoints.map((pt,i)=>
+      `<div style="display:flex;gap:10px;margin-bottom:10px;color:#ccc;font-size:14px;line-height:1.5"><span style="color:#ff4545;font-weight:700;flex-shrink:0">${i+1}.</span>${pt}</div>`
+    ).join(''));
 
-    // Tags
-    document.getElementById('rTags').innerHTML = data.tags.map(t =>
-      `<span class="tag">#${t}</span>`
-    ).join('');
+    setHTML('rTags',data.tags.map(t=>`<span class="tag">#${t}</span>`).join(''));
 
-    // Thumbnails
-    document.getElementById('rThumbs').innerHTML = data.thumbnailSuggestions.map((th,i) => `
+    setHTML('rThumbs',data.thumbnailSuggestions.map((th,i)=>`
       <div class="thumb">
         <div class="thumb-img" style="background:${th.bgGradient}">
           <div style="font-size:40px">${th.emoji}</div>
@@ -195,16 +198,17 @@ JSON structure:
           <div style="color:#ccc;font-size:13px">${th.description}</div>
           <div style="color:#666;font-size:11px;margin-top:6px;font-style:italic">${th.colorScheme}</div>
         </div>
-      </div>`).join('');
+      </div>`).join(''));
 
-    document.getElementById('results').style.display = 'block';
+    show('results');
     setStatus('');
-  } catch(e) {
-    setError('⚠️ ' + (e.message || 'Something went wrong. Try again.'));
+
+  }catch(err){
+    setError('⚠️ '+err.message);
     setStatus('');
   }
 
-  btn.disabled = false;
+  btn.disabled=false;
 }
 </script>
 </body>
