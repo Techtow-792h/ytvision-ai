@@ -145,9 +145,18 @@ Return this exact JSON:
       body:JSON.stringify({prompt})
     });
 
-    const aiData=await aiRes.json();
-    const aiText=aiData?.candidates?.[0]?.content?.parts?.[0]?.text||'';
-    if(!aiText)throw new Error('No response from AI. Please try again.');
+    const rawText=await aiRes.text();
+    let aiData;
+    try{ aiData=JSON.parse(rawText); }
+    catch(e){ throw new Error('Worker error: '+rawText.slice(0,100)); }
+
+    const aiText=aiData?.candidates?.[0]?.content?.parts?.[0]?.text||
+                 aiData?.contents?.[0]?.parts?.[0]?.text||
+                 aiData?.text||'';
+
+    if(!aiText){
+      throw new Error('AI error: '+JSON.stringify(aiData).slice(0,150));
+    }
 
     const s=aiText.indexOf('{');
     const e=aiText.lastIndexOf('}');
